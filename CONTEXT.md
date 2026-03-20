@@ -187,3 +187,52 @@ See `docs/session-02-full-archive-map.md` for full details.
 **Status:** Complete. Full city map generated.
 **Next session (03):** React + Pixi.js frontend. Scaffold, load data, render dots, zoom/pan, district labels.
 **Key question for session 03:** What does it feel like to move around in the city?
+
+### Session 03 — March 20, 2026
+**Status:** Complete. City renders in browser. District names decided. Tooltips next.
+
+**What was built:**
+- `pipeline/06_export_frontend_data.py` — splits full_mapped.json into 3 browser files
+- `frontend/` — full React + Pixi.js frontend scaffolded from scratch
+  - `index.html` — dark background, fullscreen canvas
+  - `src/main.jsx` — React entry point
+  - `src/App.jsx` — Pixi.js city renderer (all logic lives here)
+- `frontend/public/points.json` (~15MB), `districts.json` (tiny), `tweets.json` (~50MB)
+
+**Key technical decisions:**
+- Pixi.js v7 + pixi-viewport v5 (use `--legacy-peer-deps` for install)
+- One Graphics object per district = one draw call per colour = fast rendering
+- Coordinates normalised 0–1 in export, multiplied by WORLD_SIZE=8000 in frontend
+- Viewport fitted to actual data bounding box (not full world) + 5% padding
+- tweets.json lazy-loaded on first click, cached in `appRef._tweetsCache`
+- Labels scale inversely to viewport zoom (consistent on-screen size)
+- Landmark sizing: >10k likes=4px, >2k=3px, >500=2.2px, else 1.8px
+
+**Bugs fixed:**
+- `RangeError: Maximum call stack size exceeded` — `Math.min(...206k items)` blows JS stack → replaced with manual forEach loop
+- City had too much empty space → viewport.fit() on actual data bounding box
+- Labels only visible when zoomed in → lowered fade threshold 0.06 → 0.03
+- Tweet panel off-screen → moved to top-right
+- URLs in tweet text not clickable → split on URL regex, wrap in `<a>` tags
+
+**District naming — 28 clusters → 24 named + The Agora:**
+- D00, D20, D26, D27 merged into **The Agora** (reply conversations, not thematic content)
+- D05 → **The Animal Kingdom** (not "wife" — Visa tweets about animals with/to his wife)
+- D06 → **Deep Dive District** (self-reply threading artifact, not about Visa himself)
+- Full name list in `docs/session-03-frontend.md`
+
+**Decision: hover tooltips for district descriptions**
+- Names like "The Marketplace", "The Interior" are evocative but not obvious
+- One-sentence descriptions will appear on label hover
+- Keeps map clean — meaning is one hover away
+
+**Design status open:**
+- `cluster_top` (28 districts) shown at city view; `cluster_sub` (61 sub-districts) zoom switch — not yet implemented
+- Filled district regions instead of dots — not yet implemented
+- Fog of war — not yet implemented
+
+**Next session (04):**
+1. Write one-sentence descriptions for all 24 districts + The Agora
+2. Implement district hover tooltips
+3. Sub-district zoom switching (cluster_top → cluster_sub at threshold)
+4. Begin visual identity — filled district regions
