@@ -1,28 +1,29 @@
 """
-Script 05 — Map the Full Archive: UMAP + HDBSCAN
-=================================================
+Script 05 — Map the Full Archive: UMAP + HDBSCAN (Two-level hierarchy)
+=======================================================================
 
 INPUT:  data/full_embeddings.npy     (output of 04_embed_full.py)
         data/full_tweets_meta.json   (output of 04_embed_full.py)
-OUTPUT: data/full_mapped.json        — all tweets with x/y coords + cluster ID
-        data/full_map.png            — scatter plot of the full city
-        data/district_summary.json   — per-district stats for easy review
+OUTPUT: data/full_mapped.json        — all tweets with x/y coords + cluster_top + cluster_sub
+        data/full_map.png            — scatter plot coloured by top-level districts
+        data/district_summary.json   — per-district stats for both levels
 
-WHAT THIS DOES:
-    Same two-stage approach validated on the sample:
-      Stage 1: UMAP 768D → 15D + HDBSCAN → district labels
-      Stage 2: UMAP 768D → 2D → city layout coordinates
+TWO-LEVEL HIERARCHY:
+    The city has two zoom levels, each produced by a separate HDBSCAN pass
+    on the same cached 15D UMAP space:
 
-    With 247k tweets instead of 3k, HDBSCAN will find far more internal
-    structure. Expect 15-50 districts. Review the printed summaries carefully
-    before moving to the frontend — this is the last chance to tune parameters
-    before building the city.
+    TOP LEVEL  (cluster_top)  — 20-30 named districts, visible when zoomed out
+                                HDBSCAN_MIN_CLUSTER_SIZE_TOP = 750
+    SUB LEVEL  (cluster_sub)  — 60+ sub-districts, visible when zoomed in
+                                HDBSCAN_MIN_CLUSTER_SIZE_SUB = 300
 
-TUNING GUIDE (if output doesn't look right):
-    Too few districts (< 10):  lower  HDBSCAN_MIN_CLUSTER_SIZE (try 50)
-    Too many districts (> 50): raise  HDBSCAN_MIN_CLUSTER_SIZE (try 200)
-    Too much noise (> 40%):    lower  HDBSCAN_MIN_CLUSTER_SIZE or lower HDBSCAN_MIN_SAMPLES
-    Districts feel random:     raise  UMAP_CLUSTER_N_NEIGHBORS (try 50)
+    Each tweet gets both IDs. The frontend switches between them based on zoom.
+    This mirrors how real cities work: borough → neighbourhood → street.
+
+TUNING GUIDE:
+    Too few top districts (< 15):  lower  HDBSCAN_MIN_CLUSTER_SIZE_TOP (try 500)
+    Too many top districts (> 35): raise  HDBSCAN_MIN_CLUSTER_SIZE_TOP (try 1000)
+    Districts feel random:         raise  UMAP_CLUSTER_N_NEIGHBORS (try 50)
 """
 
 import json
@@ -31,6 +32,18 @@ import numpy as np
 from pathlib import Path
 from collections import Counter
 from datetime import datetime
+
+
+class NumpyEncoder(json.JSONEncoder):
+    """Handles numpy int64/float32/etc that json.dump chokes on."""
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -51,10 +64,10 @@ UMAP_VIZ_N_COMPONENTS = 2
 UMAP_VIZ_N_NEIGHBORS  = 15
 UMAP_VIZ_MIN_DIST     = 0.1
 
-# HDBSCAN — key lever for number of districts
-# Start at 100. If too few districts, lower. If too many, raise.
-HDBSCAN_MIN_CLUSTER_SIZE = 100
-HDBSCAN_MIN_SAMPLES      = 10
+# HDBSCAN — two passes, two zoom levels
+HDBSCAN_MIN_CLUSTER_SIZE_TOP = 750   # top-level: ~20-30 named districts
+HDBSCAN_MIN_CLUSTER_SIZE_SUB = 300   # sub-level: ~61 sub-districts
+HDBSCAN_MIN_SAMPLES          = 10
 
 KEYWORDS_PER_CLUSTER = 15
 EXAMPLES_PER_CLUSTER = 3
@@ -86,6 +99,8 @@ STOPWORDS = {
     "we'll", "they'll", "that's", "who's", "what's", "here's", "there's",
     "let's", "he's", "she's", "it'd", "yea", "yeah", "etc", "lol", "yes",
     "nah", "hey", "hm", "hmm", "oh", "okay", "ok", "kind", "lot", "bit",
+    # urls — these are noise, not topics
+    "https", "http", "com", "www", "t.co",
 }
 
 
@@ -131,43 +146,68 @@ def main():
     assert len(embeddings) == len(tweets), "Mismatch between embeddings and metadata!"
 
     # ── Stage 1: UMAP 768D → 15D ─────────────────────────────────────
-    print(f"\n[Stage 1] UMAP → {UMAP_CLUSTER_N_COMPONENTS}D for clustering...")
-    print(f"  n_neighbors={UMAP_CLUSTER_N_NEIGHBORS}, min_dist={UMAP_CLUSTER_MIN_DIST}")
-    print("  (This is the slow step — 10-20 min for 247k tweets)")
-    reducer_cluster = umap.UMAP(
-        n_components=UMAP_CLUSTER_N_COMPONENTS,
-        n_neighbors=UMAP_CLUSTER_N_NEIGHBORS,
-        min_dist=UMAP_CLUSTER_MIN_DIST,
-        metric="cosine",
-        random_state=42,
-        low_memory=False,
-        verbose=True,
-    )
-    embedding_15d = reducer_cluster.fit_transform(embeddings)
-    print(f"  Done at {datetime.now().strftime('%H:%M:%S')}")
+    cache_15d = DATA_DIR / "_umap_15d.npy"
+    if cache_15d.exists():
+        print(f"\n[Stage 1] Loading cached 15D UMAP from: {cache_15d.name}")
+        embedding_15d = np.load(cache_15d)
+        print(f"  Shape: {embedding_15d.shape}")
+    else:
+        print(f"\n[Stage 1] UMAP → {UMAP_CLUSTER_N_COMPONENTS}D for clustering...")
+        print(f"  n_neighbors={UMAP_CLUSTER_N_NEIGHBORS}, min_dist={UMAP_CLUSTER_MIN_DIST}")
+        print("  (This is the slow step — 10-20 min for 247k tweets)")
+        reducer_cluster = umap.UMAP(
+            n_components=UMAP_CLUSTER_N_COMPONENTS,
+            n_neighbors=UMAP_CLUSTER_N_NEIGHBORS,
+            min_dist=UMAP_CLUSTER_MIN_DIST,
+            metric="cosine",
+            random_state=42,
+            low_memory=False,
+            verbose=True,
+        )
+        embedding_15d = reducer_cluster.fit_transform(embeddings)
+        print(f"  Done at {datetime.now().strftime('%H:%M:%S')}")
+        np.save(cache_15d, embedding_15d)
+        print(f"  15D embedding saved to: {cache_15d.name}")
 
-    # Save intermediate result — if HDBSCAN needs re-tuning, you can
-    # reload this and skip re-running UMAP (the slow part)
-    np.save(DATA_DIR / "_umap_15d.npy", embedding_15d)
-    print(f"  15D embedding saved to: data/_umap_15d.npy")
-
-    # ── HDBSCAN ───────────────────────────────────────────────────────
-    print(f"\n[Stage 1] HDBSCAN clustering...")
-    print(f"  min_cluster_size={HDBSCAN_MIN_CLUSTER_SIZE}, min_samples={HDBSCAN_MIN_SAMPLES}")
-    clusterer = hdbscan.HDBSCAN(
-        min_cluster_size=HDBSCAN_MIN_CLUSTER_SIZE,
+    # ── HDBSCAN — top level (~20-30 districts) ───────────────────────
+    print(f"\n[Stage 1] HDBSCAN — top level (min_cluster_size={HDBSCAN_MIN_CLUSTER_SIZE_TOP})...")
+    clusterer_top = hdbscan.HDBSCAN(
+        min_cluster_size=HDBSCAN_MIN_CLUSTER_SIZE_TOP,
         min_samples=HDBSCAN_MIN_SAMPLES,
         metric="euclidean",
         cluster_selection_method="eom",
-        core_dist_n_jobs=-1,   # use all CPU cores
+        core_dist_n_jobs=-1,
     )
-    labels = clusterer.fit_predict(embedding_15d)
+    labels_top = clusterer_top.fit_predict(embedding_15d)
 
-    cluster_ids = sorted(set(labels))
-    n_clusters  = len([l for l in cluster_ids if l != -1])
-    n_noise     = sum(1 for l in labels if l == -1)
-    print(f"\n  Districts found: {n_clusters}")
-    print(f"  Standalone/noise: {n_noise:,} ({100*n_noise/len(labels):.1f}%)")
+    top_ids    = sorted(set(labels_top))
+    n_top      = len([l for l in top_ids if l != -1])
+    n_noise_top = sum(1 for l in labels_top if l == -1)
+    print(f"  Top-level districts: {n_top}")
+    print(f"  Standalone/noise:    {n_noise_top:,} ({100*n_noise_top/len(labels_top):.1f}%)")
+
+    # ── HDBSCAN — sub level (~61 districts) ──────────────────────────
+    print(f"\n[Stage 1] HDBSCAN — sub level (min_cluster_size={HDBSCAN_MIN_CLUSTER_SIZE_SUB})...")
+    clusterer_sub = hdbscan.HDBSCAN(
+        min_cluster_size=HDBSCAN_MIN_CLUSTER_SIZE_SUB,
+        min_samples=HDBSCAN_MIN_SAMPLES,
+        metric="euclidean",
+        cluster_selection_method="eom",
+        core_dist_n_jobs=-1,
+    )
+    labels_sub = clusterer_sub.fit_predict(embedding_15d)
+
+    sub_ids     = sorted(set(labels_sub))
+    n_sub       = len([l for l in sub_ids if l != -1])
+    n_noise_sub = sum(1 for l in labels_sub if l == -1)
+    print(f"  Sub-level districts: {n_sub}")
+    print(f"  Standalone/noise:    {n_noise_sub:,} ({100*n_noise_sub/len(labels_sub):.1f}%)")
+
+    # Use top-level for the main plot and summaries
+    labels      = labels_top
+    cluster_ids = top_ids
+    n_clusters  = n_top
+    n_noise     = n_noise_top
 
     # ── Stage 2: UMAP 768D → 2D for visualisation ────────────────────
     print(f"\n[Stage 2] UMAP → 2D for city layout...")
@@ -217,7 +257,7 @@ def main():
             "id":          cluster_id,
             "tweet_count": int(mask.sum()),
             "avg_likes":   round(avg_likes, 1),
-            "max_likes":   max_likes,
+            "max_likes":   int(max_likes),
             "year_range":  year_range,
             "keywords":    keywords,
             "top_tweet":   top_tweets[0]["text"] if top_tweets else "",
@@ -227,7 +267,7 @@ def main():
 
     # ── Save district summary ─────────────────────────────────────────
     with open(OUTPUT_SUMMARY, "w", encoding="utf-8") as f:
-        json.dump(district_summary, f, indent=2, ensure_ascii=False)
+        json.dump(district_summary, f, indent=2, ensure_ascii=False, cls=NumpyEncoder)
     print(f"\nDistrict summary saved to: {OUTPUT_SUMMARY}")
 
     # ── Save full mapped data ─────────────────────────────────────────
@@ -235,17 +275,18 @@ def main():
     result = []
     for i, tweet in enumerate(tweets):
         result.append({
-            "id":      tweet["id"],
-            "text":    tweet["text"],
-            "date":    tweet["date"],
-            "likes":   tweet["likes"],
-            "x":       float(coords[i, 0]),
-            "y":       float(coords[i, 1]),
-            "cluster": int(labels[i]),
+            "id":          tweet["id"],
+            "text":        tweet["text"],
+            "date":        tweet["date"],
+            "likes":       tweet["likes"],
+            "x":           float(coords[i, 0]),
+            "y":           float(coords[i, 1]),
+            "cluster_top": int(labels_top[i]),   # zoomed-out district
+            "cluster_sub": int(labels_sub[i]),   # zoomed-in sub-district
         })
 
     with open(OUTPUT_MAP, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+        json.dump(result, f, ensure_ascii=False, cls=NumpyEncoder)
     size_mb = OUTPUT_MAP.stat().st_size / 1024 / 1024
     print(f"Full mapped data saved to: {OUTPUT_MAP}  ({size_mb:.0f} MB)")
 

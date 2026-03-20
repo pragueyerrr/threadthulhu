@@ -71,8 +71,8 @@ the data; we don't design it.
 - ✅ Data pipeline written and tested on a 3,000-tweet sample
 - ✅ Two-stage UMAP approach validated — 29 coherent districts visible in sample
 - ✅ Full archive embedded (247k tweets, ~25 min on GPU)
-- ⏳ Full archive clustered and mapped (in progress)
-- ⬜ React + Pixi.js frontend
+- ✅ Full archive clustered and mapped (206k tweets · 61 districts)
+- ⏳ React + Pixi.js frontend (in progress)
 - ⬜ City rendering — buildings, streets, time axis
 - ⬜ Game feel — fog of war, landmarks, movement
 

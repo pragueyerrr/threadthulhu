@@ -89,7 +89,7 @@ STOPWORDS = {
     "there", "their", "them", "than", "then", "some", "out", "get", "got",
     "think", "know", "want", "need", "one", "time", "way", "go", "going",
     "people", "see", "good", "very", "really", "much", "make", "take",
-    "t", "re", "s", "don", "ve", "ll", "m", "rt", "http", "https",
+    "t", "re", "s", "don", "ve", "ll", "m", "rt", "http", "https", "com", "www",
     "amp", "said", "say", "even", "still", "back", "well", "too",
     "something", "because", "things", "thing", "feel", "lot", "come",
     "actually", "always", "every", "never", "now", "here", "mean",

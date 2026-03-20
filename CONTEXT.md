@@ -173,12 +173,17 @@ Update this document after each significant session with:
 - `docs/architecture.md` — full architecture reference
 - `docs/session-01-data-pipeline.md` — detailed session log
 
-**Next session (02):** Run the pipeline → inspect neighbourhood output → embed full archive → build React + Pixi.js canvas skeleton.
-**Key question for session 02:** What are the actual neighbourhoods? What does Visa's city look like?
+**Completed session 02:** Full archive mapped. 206,132 tweets · 61 districts · 64.7% standalone.
+See `docs/session-02-full-archive-map.md` for full details.
 
-**Iteration log:**
-- v1 (HDBSCAN on 2D UMAP) failed — 87% of tweets collapsed into one blob
-- v2 (two-stage: 15D UMAP for clustering + 2D UMAP for layout) worked — 29 districts on 3k sample
-- Screenshots: `docs/screenshots/sample-map-v1-blob.png`, `docs/screenshots/sample-map-v2-two-stage.png`
-- Full archive embed (script 04) currently running — ~25 min on GPU
-- Next: script 05 (map full archive), then React + Pixi.js frontend
+**Key findings:**
+- D4 is Pragya's own district (Visa tweets at/about her enough to cluster)
+- D6 is Venkatesh Rao's district
+- Recognisable neighbourhoods: Singapore, parenting, sleep, music, gaming, books, writing, money, food, gender, friends, fear, meta-Twitter
+- `https` was polluting labels — fixed in stopwords
+- 15D UMAP cached to `data/_umap_15d.npy` for fast re-runs
+
+### Session 02 — March 20, 2026
+**Status:** Complete. Full city map generated.
+**Next session (03):** React + Pixi.js frontend. Scaffold, load data, render dots, zoom/pan, district labels.
+**Key question for session 03:** What does it feel like to move around in the city?
