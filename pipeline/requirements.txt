@@ -1,0 +1,19 @@
+# Threadthulhu Data Pipeline — Python Dependencies
+#
+# IMPORTANT: Install PyTorch with CUDA FIRST (before running pip install -r requirements.txt).
+# This enables GPU-accelerated embedding (~20-30 min for full archive vs. 2-4 hrs on CPU).
+#
+# Step 1 — Install PyTorch with CUDA (for NVIDIA GPU):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+#
+# Step 2 — Install everything else:
+#   pip install -r requirements.txt
+#
+# To verify GPU is available after install, run:
+#   python -c "import torch; print(torch.cuda.is_available())"
+
+sentence-transformers>=2.7.0
+umap-learn>=0.5.6
+hdbscan>=0.8.33
+numpy>=1.26.0
+matplotlib>=3.8.0

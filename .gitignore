@@ -1,0 +1,28 @@
+# Generated data files (large, not committed)
+data/*.json
+data/*.npy
+data/*.png
+data/*.csv
+
+# Raw archive — never commit (large + contains personal data)
+*.json
+!package.json
+!package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+env/
+.venv/
+
+# Node / frontend (added later)
+node_modules/
+dist/
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
