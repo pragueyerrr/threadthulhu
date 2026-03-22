@@ -236,3 +236,84 @@ See `docs/session-02-full-archive-map.md` for full details.
 2. Implement district hover tooltips
 3. Sub-district zoom switching (cluster_top → cluster_sub at threshold)
 4. Begin visual identity — filled district regions
+
+### Session 04 — March 22, 2026
+**Status:** Complete. City fully interactive — district panel, explorer trail, reply chains, visited glow, city lights aesthetic.
+
+**What was built:**
+
+**District descriptions (all 24 + The Agora):**
+- Written one-sentence descriptions for every district in `DISTRICT_INFO` in `App.jsx`
+- Descriptions appear in the left-side district panel on hover/click
+
+**District hover panel (left side):**
+- Replaces the tooltip approach — full panel with: district name, description, tweet count, year range, avg/peak likes, top 5 keywords, top tweet excerpt
+- "Fly in ↗" button — animates viewport to district centroid at 2.5× zoom
+- "Explore a thread →" button — picks a random tweet from that district and displays it
+
+**Grid-based hover detection:**
+- 300×300 grid map built at load time; each cell stores majority district
+- Pointer → world coords → grid cell → district id in O(1) — no per-frame scan
+- 200ms debounce: fast cursor sweeps don't trigger panel flicker
+
+**Pinned vs hovered district logic:**
+- Click a tweet → that district becomes "pinned" (stays visible)
+- Hover a different district while pinned → "now entering · [name]" toast appears (top center)
+- Keeps panel stable while exploring
+
+**Explorer's Trail (right sidebar):**
+- Every clicked tweet is prepended to a persistent trail (capped at 50)
+- Trail stored in `localStorage` — survives page refresh
+- Sidebar toggle button (bottom right) — shows/hides the full scrollable list
+- Click any trail entry to re-read that tweet
+
+**Visited tweet glow:**
+- Clicked tweet ids stored in `localStorage` as `threadthulhu_visited`
+- Each tick: visited dots redrawn with a pulsing glow (sine wave, ~4× larger)
+- Additive blend — visited dots glow warm white against the dark canvas
+
+**Reply chain visualization:**
+- Click a tweet → parent reply lines drawn (bright warm white, 4px)
+- Child reply lines drawn (amber, 3px) — up to 30 children shown
+- Glow dot on clicked tweet, endpoint dots on parents and children
+- Lines fade in/out smoothly (ticker lerp)
+- `connections.json` loaded at startup (graceful fallback if missing)
+
+**City lights aesthetic (visual overhaul):**
+- All district dots → warm white (0xffe8c0) with additive blend → glows brightest at dense centres
+- Background deep navy (0x080810) instead of near-black — subtle blue atmosphere
+- Standalone dots dimmed to 15% opacity — they're city fabric, not noise
+- District region tints: soft colour circles (α=0.07, radius=22) per district point
+  - Overlapping circles build up colour organically at cluster centres
+  - Fades in at overview scale (< 0.10), fully gone by 0.30 — colour only visible from far away
+
+**Double-click to zoom:**
+- Double-clicking empty space zooms to that district's centroid (scale 2×)
+- Only fires at overview scale (< 1.5) to avoid conflicting with tweet clicking
+
+**Typography:**
+- Added Cinzel (serif caps) + Spectral (italic body) from Google Fonts via `index.html`
+- All UI elements use these fonts — map aesthetic, not tech UI
+
+**Pipeline updates (`pipeline/06_export_frontend_data.py`):**
+- Exports `sub_districts.json` — 61 sub-district centroids + keywords (ready for zoom switching)
+- Exports `connections.json` — flat int array of reply connections with road type:
+  - type 2 = highway (cross-district reply)
+  - type 1 = street (same district, different sub)
+  - type 0 = alley (same sub-district)
+
+**Key technical decisions:**
+- Grid hover map (300×300 Int16Array) — O(1) hover lookup, no frame scanning
+- Pixi `BLEND_MODES.ADD` on district dots — makes overlapping lights bloom naturally
+- `pinnedDistrict` vs `hoveredDistrict` state — panel stays stable on click, updates on wander
+- Trail entries store colour + district name at read time — survives district rename
+
+**Design status open:**
+- Sub-district zoom switching — `sub_districts.json` is exported and ready; frontend not yet wired
+- Canvas district labels (text drawn on map, not just in side panel) — not yet implemented
+- Fog of war — not yet implemented
+
+**Next session (05):**
+1. Sub-district zoom switching — at ~2–3× zoom, swap to 61 sub-district labels on canvas
+2. Canvas district name labels — Pixi Text objects at centroid positions, scale-invariant
+3. Fog of war — unvisited districts rendered dim; visited ones fully lit
