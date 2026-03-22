@@ -105,6 +105,7 @@ def main():
             "ct":  t["cluster_top"],   # top-level district
             "cs":  t["cluster_sub"],   # sub-level district
             "l":   t["likes"],         # likes (for landmark sizing)
+            "yr":  int(t["date"][:4]), # year (for assembly animation)
         })
 
     points_path = PUBLIC_DIR / "points.json"

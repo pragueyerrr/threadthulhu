@@ -317,3 +317,74 @@ See `docs/session-02-full-archive-map.md` for full details.
 1. Sub-district zoom switching — at ~2–3× zoom, swap to 61 sub-district labels on canvas
 2. Canvas district name labels — Pixi Text objects at centroid positions, scale-invariant
 3. Fog of war — unvisited districts rendered dim; visited ones fully lit
+
+### Session 05 — March 22, 2026
+**Status:** Complete. Full assembly animation built. Bugs deferred.
+
+**What was built:**
+
+**Pipeline change:**
+- Added `yr` (year, int) field to every point in `points.json` via `pipeline/06_export_frontend_data.py`
+- Re-ran pipeline — `points.json` now 16.7MB (was 15MB)
+
+**Assembly animation — 5-phase intro sequence:**
+
+Phase 1 — Stillness (2.2s):
+- Title "Threadthulhu" + subtitle "A cartography of @visakanv" fade in from centre on pure darkness
+- Connection mesh (`netG`) built silently during this pause — 59k line segments, two passes:
+  - Local connections (streets + alleys): 0.7px, 0.09α
+  - Highways (cross-district): 0.9px, 0.14α — these form the spines shooting to edges
+- `netG.alpha = 0.001` (pre-warms GPU during stillness, prevents upload stutter on reveal)
+- All real city layers hidden; `_introPlaying` flag suppresses regionsG ticker
+
+Phase 2 — Time build (6s):
+- Dots accumulate year by year, 2010 → 2024
+- Equal time per year (not equal points) — each year gets ~400ms regardless of tweet count
+- Ticker-based continuous reveal with accumulation: never clears animG, only draws NEW dots each frame — O(new) not O(total)
+- Standalone tweets (ct === -1) subsampled at 50% to halve draw-call count
+- Year label updates only when year changes (not 60fps)
+
+Phase 3 — Network reveal (0.9s fade-in):
+- All 59k connections fade in over the accumulated dots
+- The full nebula: dense warm centre, spines radiating to edges
+- Reference screenshot: Screenshot 2026-03-20 193533.png
+
+Phase 4 — Hold (2s):
+- The nebula is visible in full. No UI. Just the image.
+
+Phase 5 — Crossfade (0.8s):
+- animG + netG fade out simultaneously
+- Real city layers fade in
+- `_introPlaying` flag released; regionsG ticker resumes
+
+**Year progress bar:**
+- Positioned at bottom of screen during time build only
+- Large glowing year number, thin track with tick marks per year, filled bar + glow cursor
+- Both bar and cursor use `transition: 0.4s linear` — stay in sync
+
+**UI gating:**
+- All panels, trail, hints hidden until introPhase === 'done'
+- Intro overlay centred on screen; hides when done
+
+**Known bugs (deferred to session 06):**
+- Pulsing visited glow dots not working (String key fix attempted but didn't resolve)
+- "Fly in ↗" button not working (`_flyTo` rewritten with raw viewport math but still failing)
+- Both bugs are non-blocking — city is fully explorable without them
+
+**Known performance issue (deferred, fix documented in memory):**
+- Minimal lag in final second of time build (~2023-2024)
+- Cause: accumulated animG Graphics object with ~100k draw calls
+- Fix when ready: RenderTexture baking per year batch
+
+**Ideas banked this session (saved to memory):**
+- City assembles on load ✓ (built)
+- Time Traveller mode (year slider on city)
+- The Oracle (semantic search → lights up dots)
+- Bridges page — cross-district connections as architectural feature, Roam-style graph
+- Bridges as a whole concept: Pragya loves actual bridges, they should be a centrepiece
+
+**Next session (06):**
+1. Fix pulsing visited dots
+2. Fix fly in button
+3. Commit + push to GitHub
+4. Begin deployment (fix .gitignore, upload tweets.json to GitHub Releases, Vercel)

@@ -57,7 +57,9 @@ export default function App() {
   const lastHoveredIdRef  = useRef(null)
   const tweetsByDistrictRef = useRef({})
   const visitedIdsRef     = useRef(new Set())
-  const [status,          setStatus]          = useState('Loading city data...')
+  const [status,          setStatus]          = useState('')
+  const [introPhase,      setIntroPhase]      = useState('loading') // loading → still → building → network → done
+  const [buildYear,       setBuildYear]       = useState(null)
   const [hoveredDistrict, setHoveredDistrict] = useState(null)
   const [pinnedDistrict,  setPinnedDistrict]  = useState(null)
   const [selectedTweet,   setSelectedTweet]   = useState(null)
@@ -74,7 +76,6 @@ export default function App() {
 
     async function init() {
       // ── Load data ──────────────────────────────────────────────────
-      setStatus('Loading points...')
       const [pointsRes, districtsRes, connRes] = await Promise.all([
         fetch('/points.json'),
         fetch('/districts.json'),
@@ -98,22 +99,26 @@ export default function App() {
       tweetsByDistrictRef.current = tweetsByDistrict
 
       // Build id → world position + size map for visited dot rendering
+      // Use string keys — tweet IDs are large ints that JSON round-trips differently
       const pointsById = {}
       points.forEach(p => {
-        pointsById[p.id] = {
+        pointsById[String(p.id)] = {
           wx:   p.x * WORLD_SIZE,
           wy:   p.y * WORLD_SIZE,
           size: p.l > 10000 ? 4 : p.l > 2000 ? 3 : p.l > 500 ? 2.2 : 1.8,
         }
       })
 
-      // Load visited tweet ids from localStorage
+      // Load visited tweet ids from localStorage (string keys throughout)
       try {
         const saved = localStorage.getItem('threadthulhu_visited')
-        if (saved) JSON.parse(saved).forEach(id => visitedIdsRef.current.add(id))
+        if (saved) JSON.parse(saved).forEach(id => visitedIdsRef.current.add(String(id)))
       } catch (e) {}
-
-      setStatus('Rendering city...')
+      // Fallback: populate from trail so visited glow reflects prior exploration
+      try {
+        const trailSaved = JSON.parse(localStorage.getItem('threadthulhu_trail') || '[]')
+        trailSaved.forEach(e => { if (e?.id) visitedIdsRef.current.add(String(e.id)) })
+      } catch (e) {}
 
       // ── Compute tight bounding box ─────────────────────────────────
       let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity
@@ -156,6 +161,27 @@ export default function App() {
         .decelerate({ friction: 0.94 })
         .clampZoom({ minScale: 0.05, maxScale: 30 })
       appRef.current._viewport = viewport
+
+      // Custom fly-to tween — uses raw viewport position math, works in all pixi-viewport versions.
+      // viewport.x/y are screen-space offsets; scale controls zoom.
+      // To center world point (wx,wy) at scale s: viewport.x = screenW/2 - wx*s
+      appRef.current._flyTo = (targetX, targetY, targetScale = 2.5, duration = 900) => {
+        const startScale = viewport.scale.x
+        const startX     = (-viewport.x + app.screen.width  / 2) / startScale
+        const startY     = (-viewport.y + app.screen.height / 2) / startScale
+        const startTime  = performance.now()
+        const flyId = app.ticker.add(() => {
+          const rawT = Math.min((performance.now() - startTime) / duration, 1)
+          const t    = -(Math.cos(Math.PI * rawT) - 1) / 2  // easeInOutSine
+          const cs   = startScale + (targetScale - startScale) * t
+          const cx   = startX + (targetX - startX) * t
+          const cy   = startY + (targetY - startY) * t
+          viewport.scale.set(cs)
+          viewport.x = app.screen.width  / 2 - cx * cs
+          viewport.y = app.screen.height / 2 - cy * cs
+          if (rawT >= 1) app.ticker.remove(flyId)
+        })
+      }
 
       const cityW = (xMax - xMin + padX * 2) * WORLD_SIZE
       const cityH = (yMax - yMin + padY * 2) * WORLD_SIZE
@@ -330,12 +356,7 @@ export default function App() {
             const ct = (gx >= 0 && gy >= 0) ? gridMap[gy * GRID + gx] : -1
             const d  = ct !== -1 ? districtsById[ct] : null
             if (d) {
-              viewport.animate({
-                position: { x: d.cx * WORLD_SIZE, y: d.cy * WORLD_SIZE },
-                scale: 2.0,
-                time: 800,
-                ease: 'easeInOutSine',
-              })
+              appRef.current._flyTo(d.cx * WORLD_SIZE, d.cy * WORLD_SIZE, 2.0, 800)
             }
             lastEmptyClickTime = 0; lastEmptyClickWorld = null
           } else {
@@ -410,13 +431,13 @@ export default function App() {
           setSelectedTweet({ ...tweet, id: p.id })
           if (p.ct !== -1) setPinnedDistrict({ ct: p.ct, color, ...dData, ...info })
 
-          // Mark visited (glowing dot)
-          visitedIdsRef.current.add(p.id)
+          // Mark visited (glowing dot) — string key to match _pointsById
+          visitedIdsRef.current.add(String(p.id))
           try { localStorage.setItem('threadthulhu_visited', JSON.stringify([...visitedIdsRef.current])) } catch (e) {}
 
-          // Add to explorer's trail (prepend, cap at 50)
+          // Add to explorer's trail (prepend, cap at 100)
           setTrail(prev => {
-            const next = [entry, ...prev.filter(e => e.id !== p.id)].slice(0, 50)
+            const next = [entry, ...prev.filter(e => e.id !== p.id)].slice(0, 100)
             try { localStorage.setItem('threadthulhu_trail', JSON.stringify(next)) } catch (e) {}
             return next
           })
@@ -428,9 +449,8 @@ export default function App() {
         const scale = viewport.scale.x
         const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
-        // District tints: full colour at city overview, fade OUT as you zoom in
-        // Visible at scale < 0.10, fully gone by scale 0.30
-        if (appRef.current?._ref_regionsG)
+        // District tints: suppressed during intro animation, then scale-dependent
+        if (!appRef.current?._introPlaying && appRef.current?._ref_regionsG)
           appRef.current._ref_regionsG.alpha = clamp((0.30 - scale) / 0.20, 0, 1)
 
         // Reply chain: smooth fade toward target
@@ -445,7 +465,7 @@ export default function App() {
           if (visitedIdsRef.current.size > 0) {
             vg.beginFill(0xfffce0, 0.95)
             for (const id of visitedIdsRef.current) {
-              const pt = appRef.current._pointsById?.[id]
+              const pt = appRef.current._pointsById?.[String(id)]
               if (pt) vg.drawCircle(pt.wx, pt.wy, pt.size * pulse * 4)
             }
             vg.endFill()
@@ -453,7 +473,173 @@ export default function App() {
         }
       })
 
-      setStatus('')
+      // ── Assembly animation ─────────────────────────────────────────
+      // Sequence:
+      //   Phase 1 — Stillness: title fades in on darkness. Connection mesh built silently.
+      //   Phase 2 — Time build: dots appear year by year with progress bar.
+      //   Phase 3 — Network reveal: all 59k connections flash in over the dots. Nebula moment.
+      //   Phase 4 — Hold: the full network is visible for 2s.
+      //   Phase 5 — Crossfade: animation layers dissolve, interactive city fades in.
+
+      appRef.current._introPlaying = true  // suppresses regionsG ticker during animation
+
+      const years = [...new Set(points.map(p => p.yr))].sort()
+      const MIN_YEAR = years[0], MAX_YEAR = years[years.length - 1]
+      appRef.current._introYears = { min: MIN_YEAR, max: MAX_YEAR }
+
+      const byYear = {}
+      points.forEach((p, i) => {
+        if (!byYear[p.yr]) byYear[p.yr] = []
+        byYear[p.yr].push(i)
+      })
+
+      // Hide all real city layers — they fade in at the end
+      viewport.children.forEach(child => { child.alpha = 0 })
+
+      // ── Phase 1: Stillness ────────────────────────────────────────
+      setIntroPhase('still')
+
+      // Build the full connection mesh silently while the title is showing.
+      // Draw highways (cross-district) brighter, local connections subtler.
+      // With additive blending, dense clusters accumulate into the bright nebula core.
+      const netG = new Graphics()
+      netG.blendMode = BLEND_MODES.ADD
+      netG.alpha = 0.001  // imperceptible but forces GPU upload during stillness
+      if (connRaw) {
+        // Pass 1 — local connections (streets + alleys): thin, faint
+        netG.lineStyle(0.7, 0xfff0d0, 0.09)
+        for (let i = 0; i < connRaw.length; i += 3) {
+          if (connRaw[i + 2] === 2) continue  // skip highways for now
+          const from = points[connRaw[i]], to = points[connRaw[i + 1]]
+          if (from && to) {
+            netG.moveTo(from.x * WORLD_SIZE, from.y * WORLD_SIZE)
+            netG.lineTo(to.x * WORLD_SIZE, to.y * WORLD_SIZE)
+          }
+        }
+        // Pass 2 — highways (cross-district): slightly brighter, they form the spines
+        netG.lineStyle(0.9, 0xfff8e0, 0.14)
+        for (let i = 0; i < connRaw.length; i += 3) {
+          if (connRaw[i + 2] !== 2) continue
+          const from = points[connRaw[i]], to = points[connRaw[i + 1]]
+          if (from && to) {
+            netG.moveTo(from.x * WORLD_SIZE, from.y * WORLD_SIZE)
+            netG.lineTo(to.x * WORLD_SIZE, to.y * WORLD_SIZE)
+          }
+        }
+      }
+      viewport.addChild(netG)
+
+      await new Promise(r => setTimeout(r, 2200))
+
+      // ── Phase 2: Time build ───────────────────────────────────────
+      // Continuous ticker-based reveal — dots accumulate smoothly without clearing.
+      // Sort all points chronologically; reveal at constant rate across total duration.
+      // Only call setBuildYear when year actually changes (avoids 60fps React re-renders).
+      setIntroPhase('building')
+
+      const animG = new Graphics()
+      animG.blendMode = BLEND_MODES.ADD
+      viewport.addChild(animG)
+
+      // Sort indices by year (stable across ties)
+      const sortedByTime = [...points.keys()].sort((a, b) => points[a].yr - points[b].yr)
+      const totalPoints  = sortedByTime.length
+      const TOTAL_MS     = 6000
+
+      // Precompute per-year start index in sortedByTime for O(1) scrubbing
+      const yearStartIdx = {}
+      let cumIdx = 0
+      for (const yr of years) {
+        yearStartIdx[yr] = cumIdx
+        cumIdx += (byYear[yr] || []).length
+      }
+      yearStartIdx['_end'] = cumIdx
+
+      await new Promise(resolve => {
+        let lastRevealIdx = 0
+        let lastYear      = null
+        const buildStart  = performance.now()
+        const msPerYear   = TOTAL_MS / years.length  // each year gets equal screen-time
+
+        const buildId = app.ticker.add(() => {
+          const elapsed      = performance.now() - buildStart
+          // How far through the year array are we (floating point)
+          const yearFloat    = Math.min(elapsed / msPerYear, years.length)
+          const yearIdx      = Math.min(Math.floor(yearFloat), years.length - 1)
+          const currentYear  = years[yearIdx]
+          const withinYear   = yearFloat - yearIdx  // 0→1 progress inside this year
+          const yearCount    = (byYear[currentYear] || []).length
+          const revealIdx    = yearStartIdx[currentYear] + Math.floor(withinYear * yearCount)
+
+          // Update year label only on change — avoids 60fps React re-renders
+          if (currentYear !== lastYear) { setBuildYear(currentYear); lastYear = currentYear }
+
+          // Accumulate only the new dots since last frame — never clear.
+          // Skip every other standalone tweet (ct === -1) to halve draw-call count
+          // while keeping all district + landmark dots. Additive blend hides the gap.
+          if (revealIdx > lastRevealIdx) {
+            animG.beginFill(0xffe8c0, 0.7)
+            for (let i = lastRevealIdx; i < revealIdx; i++) {
+              const p = points[sortedByTime[i]]
+              if (p.ct === -1 && i % 2 === 1) continue  // thin the standalone noise
+              const size = p.l > 10000 ? 4 : p.l > 2000 ? 3 : p.l > 500 ? 2.2 : 1.8
+              animG.drawCircle(p.x * WORLD_SIZE, p.y * WORLD_SIZE, size)
+            }
+            animG.endFill()
+            lastRevealIdx = revealIdx
+          }
+
+          if (elapsed >= TOTAL_MS) { app.ticker.remove(buildId); resolve() }
+        })
+      })
+
+      // ── Phase 3: Network reveal ───────────────────────────────────
+      // Connections fade in over the dots — the full nebula appears
+      setIntroPhase('network')
+      setBuildYear(null)
+
+      await new Promise(resolve => {
+        const NET_FADE  = 900
+        const netStart  = performance.now()
+        const netFadeId = app.ticker.add(() => {
+          const t = Math.min((performance.now() - netStart) / NET_FADE, 1)
+          netG.alpha = t
+          if (t >= 1) { app.ticker.remove(netFadeId); resolve() }
+        })
+      })
+
+      // ── Phase 4: Hold ─────────────────────────────────────────────
+      await new Promise(r => setTimeout(r, 2000))
+
+      // ── Phase 5: Crossfade to city ────────────────────────────────
+      setIntroPhase('done')
+      appRef.current._introPlaying = false
+
+      const regionsGRef   = appRef.current._ref_regionsG
+      const FADE_DURATION = 800
+      const fadeStart     = performance.now()
+
+      await new Promise(resolve => {
+        const fadeId = app.ticker.add(() => {
+          const t = Math.min((performance.now() - fadeStart) / FADE_DURATION, 1)
+          animG.alpha = 1 - t
+          netG.alpha  = 1 - t
+          viewport.children.forEach(child => {
+            if (child !== animG && child !== netG && child !== regionsGRef)
+              child.alpha = t
+          })
+          if (t >= 1) {
+            app.ticker.remove(fadeId)
+            viewport.removeChild(animG); animG.destroy()
+            viewport.removeChild(netG);  netG.destroy()
+            // Hard-set so no frame can leave layers at partial alpha
+            viewport.children.forEach(child => {
+              if (child !== regionsGRef) child.alpha = 1
+            })
+            resolve()
+          }
+        })
+      })
     }
 
     init().catch(err => {
@@ -494,22 +680,66 @@ export default function App() {
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-      {/* Loading */}
-      {status && (
+      {/* ── Intro overlay — covers canvas during assembly ── */}
+      {introPhase !== 'done' && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+          // Fade the overlay out as city appears
+          opacity: introPhase === 'building' ? 1 : 1,
+          transition: 'opacity 0.8s ease',
+        }}>
+          {/* Main title — fades in during 'still' phase */}
+          <div style={{
+            fontFamily: "'Cinzel', serif", fontSize: 28, fontWeight: 600,
+            letterSpacing: 8, textTransform: 'uppercase',
+            color: '#ede8df',
+            textShadow: '0 0 40px rgba(255,232,192,0.4), 0 0 80px rgba(255,180,80,0.2)',
+            opacity: introPhase === 'loading' ? 0 : 1,
+            transform: introPhase === 'loading' ? 'translateY(8px)' : 'translateY(0)',
+            transition: 'opacity 1.2s ease, transform 1.2s ease',
+            marginBottom: 12,
+          }}>
+            Threadthulhu
+          </div>
+
+          <div style={{
+            fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 6,
+            textTransform: 'uppercase',
+            color: '#fff5e0',
+            textShadow: '0 0 4px rgba(255,255,255,1), 0 0 10px rgba(255,232,192,1), 0 0 25px rgba(255,180,80,0.95), 0 0 55px rgba(255,120,40,0.7)',
+            opacity: introPhase === 'loading' ? 0 : 1,
+            transition: 'opacity 1.4s ease 0.3s',
+            marginBottom: 48,
+          }}>
+            A cartography of @visakanv
+          </div>
+
+          {/* spacer so title stays vertically centered */}
+          <div style={{ height: 80 }} />
+        </div>
+      )}
+
+      {/* Tweet text loading status — post-intro only */}
+      {introPhase === 'done' && status && (
         <div style={{
           position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%,-50%)',
           color: '#444', fontFamily: "'Cinzel', serif", fontSize: 12, letterSpacing: 3,
-          textTransform: 'uppercase',
+          textTransform: 'uppercase', pointerEvents: 'none',
         }}>
           {status}
         </div>
       )}
 
-      {/* Title — top left */}
+      {/* Title — top left (post-intro) */}
       <div style={{
         position: 'absolute', top: 24, left: 28,
         pointerEvents: 'none',
+        opacity: introPhase === 'done' ? 1 : 0,
+        transition: 'opacity 0.8s ease',
       }}>
         <div style={{
           fontFamily: "'Cinzel', serif", fontSize: 15, fontWeight: 600,
@@ -528,18 +758,89 @@ export default function App() {
         </div>
       </div>
 
-      {/* Hint — bottom left */}
-      <div style={{
-        position: 'absolute', bottom: 24, left: 28,
-        fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 3,
-        textTransform: 'uppercase', color: '#888', pointerEvents: 'none',
-        textShadow: '0 0 8px rgba(255,220,160,0.2)',
-      }}>
-        hover to explore · click a light to read
-      </div>
+      {/* Year progress bar — bottom of screen during city assembly */}
+      {introPhase === 'building' && buildYear && (() => {
+        const info   = appRef.current?._introYears
+        const minYr  = info?.min ?? 2010
+        const maxYr  = info?.max ?? 2024
+        const pct    = (buildYear - minYr) / Math.max(maxYr - minYr, 1)
+        return (
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            padding: '0 48px 32px',
+            pointerEvents: 'none',
+          }}>
+            {/* Year label */}
+            <div style={{
+              fontFamily: "'Cinzel', serif", fontSize: 22, fontWeight: 500,
+              letterSpacing: 6, textTransform: 'uppercase',
+              color: '#e8d5a8',
+              textShadow: '0 0 20px rgba(255,210,120,0.9), 0 0 50px rgba(255,170,60,0.5)',
+              marginBottom: 10, textAlign: 'center',
+            }}>
+              {buildYear}
+            </div>
+            {/* Track */}
+            <div style={{
+              position: 'relative', height: 2,
+              background: 'rgba(255,220,140,0.12)',
+              borderRadius: 1,
+            }}>
+              {/* Year tick marks */}
+              {Array.from({ length: maxYr - minYr + 1 }, (_, i) => minYr + i).map(yr => (
+                <div key={yr} style={{
+                  position: 'absolute', top: -3, width: 1, height: 8,
+                  background: 'rgba(255,220,140,0.25)',
+                  left: `${((yr - minYr) / (maxYr - minYr)) * 100}%`,
+                }} />
+              ))}
+              {/* Filled bar */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, bottom: 0,
+                width: `${pct * 100}%`,
+                background: 'linear-gradient(90deg, rgba(255,180,60,0.4), rgba(255,220,140,0.9))',
+                borderRadius: 1,
+                boxShadow: '0 0 12px rgba(255,200,80,0.6)',
+                transition: 'width 0.4s linear',
+              }} />
+              {/* Glow cursor */}
+              <div style={{
+                position: 'absolute', top: '50%', transform: 'translate(-50%, -50%)',
+                left: `${pct * 100}%`,
+                width: 8, height: 8, borderRadius: '50%',
+                background: '#ffe8a0',
+                boxShadow: '0 0 10px rgba(255,220,100,1), 0 0 25px rgba(255,180,60,0.8)',
+                transition: 'left 0.4s linear',
+              }} />
+            </div>
+            {/* Min/max year labels */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              marginTop: 8,
+              fontFamily: "'Cinzel', serif", fontSize: 10, letterSpacing: 3,
+              color: 'rgba(255,220,140,0.35)',
+            }}>
+              <span>{minYr}</span>
+              <span>{maxYr}</span>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Hint — bottom left (post-intro only) */}
+      {introPhase === 'done' && (
+        <div style={{
+          position: 'absolute', bottom: 24, left: 28,
+          fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 3,
+          textTransform: 'uppercase', color: '#888', pointerEvents: 'none',
+          textShadow: '0 0 8px rgba(255,220,160,0.2)',
+        }}>
+          hover to explore · click a light to read
+        </div>
+      )}
 
       {/* Explorer's Trail — full-height right sidebar */}
-      <div style={{
+      {introPhase === 'done' && <div style={{
         position: 'absolute', top: 0, right: 0, bottom: 0, width: 300,
         display: 'flex', flexDirection: 'column',
         pointerEvents: 'none',
@@ -633,7 +934,7 @@ export default function App() {
         >
           {trailOpen ? '↓ close trail' : `↑ explorer's trail${trail.length ? `  ·  ${trail.length}` : ''}`}
         </button>
-      </div>
+      </div>}
 
       {/* "Now entering" toast — bottom center, appears when drifting into a new district */}
       {nowInDistrict && (
@@ -739,12 +1040,8 @@ export default function App() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => {
-                const vp = appRef.current?._viewport
-                const d  = displayDistrict
-                if (vp && d.cx != null) vp.animate({
-                  position: { x: d.cx * WORLD_SIZE, y: d.cy * WORLD_SIZE },
-                  scale: 2.5, time: 900, ease: 'easeInOutSine',
-                })
+                const d = displayDistrict
+                if (d?.cx != null) appRef.current?._flyTo(d.cx * WORLD_SIZE, d.cy * WORLD_SIZE, 2.5)
               }}
               style={{
                 background: 'none', cursor: 'pointer',
