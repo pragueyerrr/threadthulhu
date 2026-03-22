@@ -58,6 +58,7 @@ export default function App() {
   const tweetsByDistrictRef = useRef({})
   const visitedIdsRef     = useRef(new Set())
   const [status,          setStatus]          = useState('')
+  const [zoomedIn,        setZoomedIn]        = useState(false)
   const [introPhase,      setIntroPhase]      = useState('loading') // loading → still → building → network → done
   const [buildYear,       setBuildYear]       = useState(null)
   const [hoveredDistrict, setHoveredDistrict] = useState(null)
@@ -157,20 +158,30 @@ export default function App() {
       viewport
         .drag()
         .pinch()
-        .wheel({ percent: 0.15, smooth: 8 })
+        .wheel({ percent: 0.25, smooth: 5 })
         .decelerate({ friction: 0.94 })
         .clampZoom({ minScale: 0.05, maxScale: 30 })
+      // Reset decelerate on every zoom step — prevents it from accumulating
+      // large position deltas from smooth-zoom repositioning and fighting zoom-out.
+      viewport.on('zoomed', () => { viewport.plugins.get('decelerate')?.reset() })
       appRef.current._viewport = viewport
 
       // Custom fly-to tween — uses raw viewport position math, works in all pixi-viewport versions.
       // viewport.x/y are screen-space offsets; scale controls zoom.
       // To center world point (wx,wy) at scale s: viewport.x = screenW/2 - wx*s
       appRef.current._flyTo = (targetX, targetY, targetScale = 2.5, duration = 900) => {
+        // Cancel any in-progress fly before starting a new one
+        if (appRef.current._flyTick) {
+          app.ticker.remove(appRef.current._flyTick)
+          appRef.current._flyTick = null
+        }
         const startScale = viewport.scale.x
         const startX     = (-viewport.x + app.screen.width  / 2) / startScale
         const startY     = (-viewport.y + app.screen.height / 2) / startScale
         const startTime  = performance.now()
-        const flyId = app.ticker.add(() => {
+        // NOTE: ticker.add() returns the Ticker, not the listener — must capture
+        // the function itself and pass it to remove(), otherwise it never unregisters.
+        const flyTick = () => {
           const rawT = Math.min((performance.now() - startTime) / duration, 1)
           const t    = -(Math.cos(Math.PI * rawT) - 1) / 2  // easeInOutSine
           const cs   = startScale + (targetScale - startScale) * t
@@ -179,8 +190,14 @@ export default function App() {
           viewport.scale.set(cs)
           viewport.x = app.screen.width  / 2 - cx * cs
           viewport.y = app.screen.height / 2 - cy * cs
-          if (rawT >= 1) app.ticker.remove(flyId)
-        })
+          if (rawT >= 1) {
+            app.ticker.remove(flyTick)
+            appRef.current._flyTick = null
+            viewport.plugins.reset()
+          }
+        }
+        appRef.current._flyTick = flyTick
+        app.ticker.add(flyTick)
       }
 
       const cityW = (xMax - xMin + padX * 2) * WORLD_SIZE
@@ -189,6 +206,7 @@ export default function App() {
       const cityY = (yMin - padY) * WORLD_SIZE + cityH / 2
       viewport.fit(true, cityW, cityH)
       viewport.moveCenter(cityX, cityY)
+      appRef.current._overview = { x: cityX, y: cityY, scale: viewport.scale.x }
 
       // ── Grid: hover detection — mouse → grid cell → district id ───
       const GRID  = 300
@@ -453,6 +471,13 @@ export default function App() {
         if (!appRef.current?._introPlaying && appRef.current?._ref_regionsG)
           appRef.current._ref_regionsG.alpha = clamp((0.30 - scale) / 0.20, 0, 1)
 
+        // Back-to-overview button: show when zoomed in past fly-in threshold
+        const nowZoomedIn = scale > 1.5
+        if (nowZoomedIn !== appRef.current._prevZoomedIn) {
+          appRef.current._prevZoomedIn = nowZoomedIn
+          setZoomedIn(nowZoomedIn)
+        }
+
         // Reply chain: smooth fade toward target
         const rcg = appRef.current?._replyChainG
         if (rcg) rcg.alpha += (appRef.current._replyChainTarget - rcg.alpha) * 0.08
@@ -620,7 +645,7 @@ export default function App() {
       const fadeStart     = performance.now()
 
       await new Promise(resolve => {
-        const fadeId = app.ticker.add(() => {
+        const fadeTick = () => {
           const t = Math.min((performance.now() - fadeStart) / FADE_DURATION, 1)
           animG.alpha = 1 - t
           netG.alpha  = 1 - t
@@ -629,16 +654,17 @@ export default function App() {
               child.alpha = t
           })
           if (t >= 1) {
-            app.ticker.remove(fadeId)
-            viewport.removeChild(animG); animG.destroy()
-            viewport.removeChild(netG);  netG.destroy()
+            app.ticker.remove(fadeTick)
+            viewport.removeChild(animG); try { animG.destroy() } catch (_) {}
+            viewport.removeChild(netG);  try { netG.destroy()  } catch (_) {}
             // Hard-set so no frame can leave layers at partial alpha
             viewport.children.forEach(child => {
               if (child !== regionsGRef) child.alpha = 1
             })
             resolve()
           }
-        })
+        }
+        app.ticker.add(fadeTick)
       })
     }
 
@@ -827,8 +853,27 @@ export default function App() {
         )
       })()}
 
-      {/* Hint — bottom left (post-intro only) */}
-      {introPhase === 'done' && (
+      {/* Back to overview button — appears when zoomed in past fly-in threshold */}
+      {introPhase === 'done' && zoomedIn && (
+        <div
+          onClick={() => {
+            const ov = appRef.current?._overview
+            if (ov) appRef.current._flyTo(ov.x, ov.y, ov.scale, 900)
+          }}
+          style={{
+            position: 'absolute', bottom: 24, left: 28,
+            fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 3,
+            textTransform: 'uppercase', color: 'rgba(255,220,140,0.7)',
+            cursor: 'pointer', pointerEvents: 'auto',
+            textShadow: '0 0 10px rgba(255,200,100,0.3)',
+          }}
+        >
+          ↩ overview
+        </div>
+      )}
+
+      {/* Hint — bottom left (post-intro only, only when not zoomed in) */}
+      {introPhase === 'done' && !zoomedIn && (
         <div style={{
           position: 'absolute', bottom: 24, left: 28,
           fontFamily: "'Cinzel', serif", fontSize: 11, letterSpacing: 3,
