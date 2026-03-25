@@ -8,6 +8,9 @@ data/*.csv
 *.json
 !package.json
 !package-lock.json
+!vercel.json
+# Frontend public assets ARE committed (served by Vercel)
+!frontend/public/*.json
 
 # Python
 __pycache__/

@@ -1,0 +1,795 @@
+[
+  {
+    "id": 0,
+    "ct": -1,
+    "count": 345,
+    "cx": 0.45741,
+    "cy": 0.36108,
+    "keywords": [
+      "fortelabs",
+      "tiago",
+      "vgr",
+      "love"
+    ]
+  },
+  {
+    "id": 1,
+    "ct": 0,
+    "count": 912,
+    "cx": 0.12184,
+    "cy": 0.45816,
+    "keywords": [
+      "qiaochuyuan",
+      "mengwong",
+      "malcolm",
+      "ocean"
+    ]
+  },
+  {
+    "id": 2,
+    "ct": -1,
+    "count": 309,
+    "cx": 0.10618,
+    "cy": 0.36744,
+    "keywords": [
+      "ashcroft",
+      "millerd",
+      "michael",
+      "hell"
+    ]
+  },
+  {
+    "id": 3,
+    "ct": 1,
+    "count": 3106,
+    "cx": 0.8337,
+    "cy": 0.54507,
+    "keywords": [
+      "thread",
+      "rock",
+      "nice",
+      "dudes"
+    ]
+  },
+  {
+    "id": 4,
+    "ct": -1,
+    "count": 408,
+    "cx": 0.12575,
+    "cy": 0.41514,
+    "keywords": [
+      "pragueyerrr",
+      "belgianadian",
+      "solarsystern",
+      "tweet"
+    ]
+  },
+  {
+    "id": 5,
+    "ct": -1,
+    "count": 324,
+    "cx": 0.11096,
+    "cy": 0.22839,
+    "keywords": [
+      "yet",
+      "haven",
+      "haven't",
+      "interesting"
+    ]
+  },
+  {
+    "id": 6,
+    "ct": 2,
+    "count": 819,
+    "cx": 0.44271,
+    "cy": 0.17572,
+    "keywords": [
+      "vgr",
+      "thread",
+      "tweet",
+      "twitter"
+    ]
+  },
+  {
+    "id": 7,
+    "ct": -1,
+    "count": 476,
+    "cx": 0.42503,
+    "cy": 0.27412,
+    "keywords": [
+      "cosmos",
+      "solarsystern",
+      "moon",
+      "selentelechia"
+    ]
+  },
+  {
+    "id": 8,
+    "ct": -1,
+    "count": 309,
+    "cx": 0.17577,
+    "cy": 0.40054,
+    "keywords": [
+      "moniza",
+      "hossain",
+      "love",
+      "read"
+    ]
+  },
+  {
+    "id": 9,
+    "ct": -1,
+    "count": 337,
+    "cx": 0.37398,
+    "cy": 0.30064,
+    "keywords": [
+      "liminal",
+      "warmth",
+      "hell",
+      "lim"
+    ]
+  },
+  {
+    "id": 10,
+    "ct": -1,
+    "count": 425,
+    "cx": 0.40834,
+    "cy": 0.33908,
+    "keywords": [
+      "malcolm",
+      "ocean",
+      "tweet",
+      "love"
+    ]
+  },
+  {
+    "id": 11,
+    "ct": 3,
+    "count": 5300,
+    "cx": 0.65223,
+    "cy": 0.23735,
+    "keywords": [
+      "thread",
+      "love",
+      "true",
+      "nice"
+    ]
+  },
+  {
+    "id": 12,
+    "ct": -1,
+    "count": 446,
+    "cx": 0.40128,
+    "cy": 0.60157,
+    "keywords": [
+      "media",
+      "news",
+      "journalism",
+      "public"
+    ]
+  },
+  {
+    "id": 13,
+    "ct": 4,
+    "count": 1474,
+    "cx": 0.59296,
+    "cy": 0.41045,
+    "keywords": [
+      "youtube",
+      "video",
+      "videos",
+      "twitter"
+    ]
+  },
+  {
+    "id": 14,
+    "ct": -1,
+    "count": 505,
+    "cx": 0.39175,
+    "cy": 0.59563,
+    "keywords": [
+      "nerd",
+      "nerds",
+      "friendly",
+      "ambitious"
+    ]
+  },
+  {
+    "id": 15,
+    "ct": -1,
+    "count": 623,
+    "cx": 0.41146,
+    "cy": 0.29398,
+    "keywords": [
+      "eigenrobot",
+      "ollybot",
+      "redux",
+      "monk"
+    ]
+  },
+  {
+    "id": 16,
+    "ct": -1,
+    "count": 449,
+    "cx": 0.51379,
+    "cy": 0.59292,
+    "keywords": [
+      "joke",
+      "humor",
+      "jokes",
+      "funny"
+    ]
+  },
+  {
+    "id": 17,
+    "ct": 5,
+    "count": 766,
+    "cx": 0.49823,
+    "cy": 0.25849,
+    "keywords": [
+      "cat",
+      "cats",
+      "animalologist",
+      "parakeetnebula"
+    ]
+  },
+  {
+    "id": 18,
+    "ct": -1,
+    "count": 504,
+    "cx": 0.16204,
+    "cy": 0.76008,
+    "keywords": [
+      "priya",
+      "ebooks",
+      "love",
+      "man"
+    ]
+  },
+  {
+    "id": 19,
+    "ct": 6,
+    "count": 839,
+    "cx": 0.10613,
+    "cy": 0.56366,
+    "keywords": [
+      "visa",
+      "visakanv",
+      "visabrain",
+      "friends"
+    ]
+  },
+  {
+    "id": 20,
+    "ct": 7,
+    "count": 4397,
+    "cx": 0.6802,
+    "cy": 0.38008,
+    "keywords": [
+      "game",
+      "movie",
+      "watch",
+      "watched"
+    ]
+  },
+  {
+    "id": 21,
+    "ct": 8,
+    "count": 2363,
+    "cx": 0.74072,
+    "cy": 0.47058,
+    "keywords": [
+      "music",
+      "song",
+      "guitar",
+      "songs"
+    ]
+  },
+  {
+    "id": 22,
+    "ct": 8,
+    "count": 331,
+    "cx": 0.79366,
+    "cy": 0.40427,
+    "keywords": [
+      "video",
+      "youtube",
+      "playlist",
+      "added"
+    ]
+  },
+  {
+    "id": 23,
+    "ct": -1,
+    "count": 579,
+    "cx": 0.36053,
+    "cy": 0.54203,
+    "keywords": [
+      "maybe",
+      "top",
+      "probably",
+      "less"
+    ]
+  },
+  {
+    "id": 24,
+    "ct": -1,
+    "count": 407,
+    "cx": 0.45547,
+    "cy": 0.81298,
+    "keywords": [
+      "smart",
+      "stupid",
+      "intelligence",
+      "dumb"
+    ]
+  },
+  {
+    "id": 25,
+    "ct": 9,
+    "count": 668,
+    "cx": 0.71585,
+    "cy": 0.8716,
+    "keywords": [
+      "smoking",
+      "cigarettes",
+      "cigarette",
+      "smoke"
+    ]
+  },
+  {
+    "id": 26,
+    "ct": 9,
+    "count": 1158,
+    "cx": 0.70986,
+    "cy": 0.80042,
+    "keywords": [
+      "breathing",
+      "doing",
+      "deep",
+      "tall"
+    ]
+  },
+  {
+    "id": 27,
+    "ct": 9,
+    "count": 1412,
+    "cx": 0.71926,
+    "cy": 0.73482,
+    "keywords": [
+      "sleep",
+      "bed",
+      "night",
+      "hours"
+    ]
+  },
+  {
+    "id": 28,
+    "ct": 10,
+    "count": 5573,
+    "cx": 0.42859,
+    "cy": 0.58074,
+    "keywords": [
+      "money",
+      "marketing",
+      "don",
+      "which"
+    ]
+  },
+  {
+    "id": 29,
+    "ct": -1,
+    "count": 681,
+    "cx": 0.49548,
+    "cy": 0.37159,
+    "keywords": [
+      "use",
+      "tabs",
+      "monitors",
+      "app"
+    ]
+  },
+  {
+    "id": 30,
+    "ct": -1,
+    "count": 442,
+    "cx": 0.41532,
+    "cy": 0.2645,
+    "keywords": [
+      "thread",
+      "threads",
+      "might",
+      "whole"
+    ]
+  },
+  {
+    "id": 31,
+    "ct": 11,
+    "count": 314,
+    "cx": 0.4907,
+    "cy": 0.14745,
+    "keywords": [
+      "hair",
+      "beard",
+      "cut",
+      "look"
+    ]
+  },
+  {
+    "id": 32,
+    "ct": 11,
+    "count": 969,
+    "cx": 0.50934,
+    "cy": 0.30537,
+    "keywords": [
+      "fashion",
+      "shirt",
+      "look",
+      "wear"
+    ]
+  },
+  {
+    "id": 33,
+    "ct": 12,
+    "count": 4899,
+    "cx": 0.38066,
+    "cy": 0.48758,
+    "keywords": [
+      "twitter",
+      "tweet",
+      "tweets",
+      "followers"
+    ]
+  },
+  {
+    "id": 34,
+    "ct": -1,
+    "count": 666,
+    "cx": 0.51921,
+    "cy": 0.87729,
+    "keywords": [
+      "school",
+      "education",
+      "teachers",
+      "kids"
+    ]
+  },
+  {
+    "id": 35,
+    "ct": -1,
+    "count": 409,
+    "cx": 0.52471,
+    "cy": 0.49031,
+    "keywords": [
+      "blog",
+      "blogpost",
+      "blogposts",
+      "twitter"
+    ]
+  },
+  {
+    "id": 36,
+    "ct": 13,
+    "count": 783,
+    "cx": 0.52897,
+    "cy": 0.45265,
+    "keywords": [
+      "notes",
+      "roam",
+      "roamresearch",
+      "google"
+    ]
+  },
+  {
+    "id": 37,
+    "ct": 14,
+    "count": 2724,
+    "cx": 0.66342,
+    "cy": 0.5373,
+    "keywords": [
+      "book",
+      "read",
+      "books",
+      "reading"
+    ]
+  },
+  {
+    "id": 38,
+    "ct": 15,
+    "count": 466,
+    "cx": 0.63465,
+    "cy": 0.55967,
+    "keywords": [
+      "essay",
+      "essays",
+      "write",
+      "writing"
+    ]
+  },
+  {
+    "id": 39,
+    "ct": 15,
+    "count": 363,
+    "cx": 0.63888,
+    "cy": 0.60676,
+    "keywords": [
+      "writing",
+      "write",
+      "writer",
+      "words"
+    ]
+  },
+  {
+    "id": 40,
+    "ct": 16,
+    "count": 1640,
+    "cx": 0.5215,
+    "cy": 0.22853,
+    "keywords": [
+      "food",
+      "coffee",
+      "eat",
+      "singapore"
+    ]
+  },
+  {
+    "id": 41,
+    "ct": 17,
+    "count": 481,
+    "cx": 0.35072,
+    "cy": 0.63685,
+    "keywords": [
+      "jesus",
+      "god",
+      "gods",
+      "religion"
+    ]
+  },
+  {
+    "id": 42,
+    "ct": 17,
+    "count": 510,
+    "cx": 0.57445,
+    "cy": 0.50863,
+    "keywords": [
+      "his",
+      "were",
+      "years",
+      "died"
+    ]
+  },
+  {
+    "id": 43,
+    "ct": 17,
+    "count": 559,
+    "cx": 0.51601,
+    "cy": 0.43153,
+    "keywords": [
+      "bus",
+      "building",
+      "architecture",
+      "which"
+    ]
+  },
+  {
+    "id": 44,
+    "ct": 18,
+    "count": 1904,
+    "cx": 0.35343,
+    "cy": 0.23351,
+    "keywords": [
+      "nosilverv",
+      "nickcammarata",
+      "indeed",
+      "related"
+    ]
+  },
+  {
+    "id": 45,
+    "ct": 17,
+    "count": 742,
+    "cx": 0.17428,
+    "cy": 0.49613,
+    "keywords": [
+      "nyc",
+      "visit",
+      "friends",
+      "maybe"
+    ]
+  },
+  {
+    "id": 46,
+    "ct": 17,
+    "count": 2852,
+    "cx": 0.17916,
+    "cy": 0.63053,
+    "keywords": [
+      "singapore",
+      "singaporean",
+      "singaporeans",
+      "chinese"
+    ]
+  },
+  {
+    "id": 47,
+    "ct": 19,
+    "count": 2128,
+    "cx": 0.4233,
+    "cy": 0.78193,
+    "keywords": [
+      "kids",
+      "kid",
+      "child",
+      "parents"
+    ]
+  },
+  {
+    "id": 48,
+    "ct": 20,
+    "count": 1086,
+    "cx": 0.22979,
+    "cy": 0.31664,
+    "keywords": [
+      "sure",
+      "idea",
+      "next",
+      "please"
+    ]
+  },
+  {
+    "id": 49,
+    "ct": 21,
+    "count": 1907,
+    "cx": 0.56392,
+    "cy": 0.77,
+    "keywords": [
+      "fear",
+      "myself",
+      "yourself",
+      "which"
+    ]
+  },
+  {
+    "id": 50,
+    "ct": -1,
+    "count": 588,
+    "cx": 0.14523,
+    "cy": 0.28724,
+    "keywords": [
+      "sorry",
+      "soon",
+      "hope",
+      "better"
+    ]
+  },
+  {
+    "id": 51,
+    "ct": 22,
+    "count": 614,
+    "cx": 0.31065,
+    "cy": 0.69467,
+    "keywords": [
+      "power",
+      "america",
+      "americans",
+      "which"
+    ]
+  },
+  {
+    "id": 52,
+    "ct": 22,
+    "count": 1683,
+    "cx": 0.40534,
+    "cy": 0.76496,
+    "keywords": [
+      "being",
+      "status",
+      "which",
+      "person"
+    ]
+  },
+  {
+    "id": 53,
+    "ct": 23,
+    "count": 809,
+    "cx": 0.39288,
+    "cy": 0.72426,
+    "keywords": [
+      "friends",
+      "friend",
+      "ask",
+      "talk"
+    ]
+  },
+  {
+    "id": 54,
+    "ct": 24,
+    "count": 1622,
+    "cx": 0.29276,
+    "cy": 0.83036,
+    "keywords": [
+      "women",
+      "men",
+      "being",
+      "sex"
+    ]
+  },
+  {
+    "id": 55,
+    "ct": 25,
+    "count": 1489,
+    "cx": 0.26005,
+    "cy": 0.77898,
+    "keywords": [
+      "wife",
+      "married",
+      "marriage",
+      "each"
+    ]
+  },
+  {
+    "id": 56,
+    "ct": 26,
+    "count": 1062,
+    "cx": 0.23334,
+    "cy": 0.37354,
+    "keywords": [
+      "sharanvkaur",
+      "pradyuprasad",
+      "saurya",
+      "eashankotha"
+    ]
+  },
+  {
+    "id": 57,
+    "ct": 27,
+    "count": 700,
+    "cx": 0.29539,
+    "cy": 0.30548,
+    "keywords": [
+      "true",
+      "exactly",
+      "yup",
+      "basically"
+    ]
+  },
+  {
+    "id": 58,
+    "ct": 27,
+    "count": 586,
+    "cx": 0.21903,
+    "cy": 0.20723,
+    "keywords": [
+      "hell",
+      "heydannymiranda",
+      "tallsnail",
+      "michaelcurzi"
+    ]
+  },
+  {
+    "id": 59,
+    "ct": 27,
+    "count": 985,
+    "cx": 0.23217,
+    "cy": 0.20907,
+    "keywords": [
+      "congrats",
+      "thanks",
+      "happy",
+      "thank"
+    ]
+  },
+  {
+    "id": 60,
+    "ct": 27,
+    "count": 438,
+    "cx": 0.3205,
+    "cy": 0.22862,
+    "keywords": [
+      "sonyasupposedly",
+      "aella",
+      "girl",
+      "sonyaellenmann"
+    ]
+  }
+]

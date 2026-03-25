@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Application, Graphics, BLEND_MODES } from 'pixi.js'
+import { Application, Container, Graphics, BLEND_MODES } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 
 // ── District colour palette ───────────────────────────────────────────────────
@@ -273,7 +273,24 @@ export default function App() {
       standaloneG.endFill()
       viewport.addChild(standaloneG)
 
+      // ── Overview dots — larger radius, visible as stars at mid-zoom ─
+      // Current detail dots (1.8–4 world units) are sub-pixel below scale 0.3.
+      // This layer uses radius 5 so individual dots appear as crisp stars at
+      // scales 0.3–0.8. Above that the detail layer takes over.
+      const dotsOverview = new Graphics()
+      dotsOverview.blendMode = BLEND_MODES.ADD
+      dotsOverview.beginFill(0xffe8c0, 0.35)
+      points.forEach(p => {
+        if (p.ct !== -1) dotsOverview.drawCircle(p.x * WORLD_SIZE, p.y * WORLD_SIZE, 5)
+      })
+      dotsOverview.endFill()
+      dotsOverview.alpha = 0
+      viewport.addChild(dotsOverview)
+      appRef.current._dotsOverview = dotsOverview
+
       // ── District dots — warm white + additive blend = city lights ──
+      // Wrapped in a Container so LOD alpha applies to the whole set at once.
+      const dotsDetailContainer = new Container()
       districts.forEach(d => {
         const g = new Graphics()
         g.blendMode = BLEND_MODES.ADD
@@ -285,8 +302,11 @@ export default function App() {
           }
         })
         g.endFill()
-        viewport.addChild(g)
+        dotsDetailContainer.addChild(g)
       })
+      dotsDetailContainer.alpha = 0
+      viewport.addChild(dotsDetailContainer)
+      appRef.current._dotsDetailContainer = dotsDetailContainer
 
       // ── Visited dots — pulsing glow, redrawn each tick ────────────
       const visitedG = new Graphics()
@@ -470,6 +490,18 @@ export default function App() {
         // District tints: suppressed during intro animation, then scale-dependent
         if (!appRef.current?._introPlaying && appRef.current?._ref_regionsG)
           appRef.current._ref_regionsG.alpha = clamp((0.30 - scale) / 0.20, 0, 1)
+
+        // LOD dot layers: crossfade overview (radius 5) ↔ detail (radius 1.8–4)
+        // based on current zoom. Overview visible when zoomed out (scale < 0.8),
+        // detail visible when zoomed in (scale > 0.3). They overlap 0.3–0.8.
+        if (!appRef.current?._introPlaying) {
+          const dotsOv = appRef.current._dotsOverview
+          const dotsDt = appRef.current._dotsDetailContainer
+          if (dotsOv && dotsDt) {
+            dotsOv.alpha = clamp((0.8 - scale) / 0.5, 0, 1)
+            dotsDt.alpha = clamp((scale - 0.3) / 0.5, 0, 1)
+          }
+        }
 
         // Back-to-overview button: show when zoomed in past fly-in threshold
         const nowZoomedIn = scale > 1.5
